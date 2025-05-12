@@ -1,42 +1,313 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Yes</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#121212;color:#fff;display:flex;justify-content:center;align-items:center;flex-direction:column;height:100vh;font-family:sans-serif}h1{font-size:2.5rem;margin-bottom:20px}.game-container{text-align:center}#question-container{margin-bottom:20px}#question{font-size:1.5rem;margin-bottom:20px}.answer-options button{background:#4CAF50;color:#fff;border:none;border-radius:8px;font-size:1rem;padding:12px 25px;margin:10px;cursor:pointer;transition:0.3s;width:100%;max-width:300px}.answer-options button:hover{background:#45a049;transform:translateY(-4px)}.timer{font-size:1.2rem;color:#ff5733;margin-bottom:20px}.canvas-container{width:500px;height:300px;background:black;position:relative;margin-top:20px;border:2px solid #fff}#result{display:none}.game-over-message{font-size:1.5rem;margin-bottom:20px}.next-button{background:#007BFF;color:white;padding:12px 25px;border-radius:8px;font-size:1rem;margin-top:20px;cursor:pointer;transition:0.3s;width:100%;max-width:300px}.next-button:hover{background:#0056b3;transform:translateY(-4px)}</style>
-</head><body>
-<div class="game-container">
-<h1>Yes</h1>
-<div id="game"><div id="timer" class="timer">Time: 30s</div><div id="question-container"><p id="question">Loading...</p></div><div id="answer-options" class="answer-options"></div></div>
-<div id="result"><h2 class="game-over-message">Game Over!</h2><p>Your score: <span id="score">0</span></p><button id="play-again" class="next-button">Play Again</button></div>
-<div class="canvas-container"><canvas id="gameCanvas" width="500" height="300"></canvas></div>
-</div>
-<script>
-let currentQuestionIndex=0,score=0,timer,timeLeft=30,gameTime=15,isGameOver=false,questionStartTime;
-let allowPlay=false,gameRunning=false,gameTimeout;
-const questions=[{question:"Capital of France?",options:["Paris","London","Rome","Berlin"],correctAnswer:"Paris"},{question:"2 + 2?",options:["3","4","5","6"],correctAnswer:"4"},{question:"Red Planet?",options:["Earth","Mars","Venus","Jupiter"],correctAnswer:"Mars"}];
-const canvas=document.getElementById("gameCanvas"),ctx=canvas.getContext("2d");
-canvas.width=300;canvas.height=200;
-let ship={x:canvas.width/2-15,y:canvas.height-35,width:20,height:20},bullets=[],aliens=[],boss=null,keys={},frameCount=0,wave=1;
+<html lang="en">
 
-function loadQuestion(){let q=questions[currentQuestionIndex];document.getElementById("question").textContent=q.question;let opts=document.getElementById("answer-options");opts.innerHTML="";q.options.forEach(o=>{let b=document.createElement("button");b.textContent=o;b.onclick=()=>checkAnswer(o);opts.appendChild(b);});document.getElementById("timer").textContent=`Time: ${timeLeft}s`;startTimer();}
-function checkAnswer(selected){clearInterval(timer);let q=questions[currentQuestionIndex];let elapsed=(Date.now()-questionStartTime)/1000;let bonus=Math.max(0,30-elapsed)*10;if(selected===q.correctAnswer){score+=100+Math.floor(bonus);Array.from(document.querySelectorAll("#answer-options button")).forEach(b=>b.disabled=true);allowPlay=true;startSpaceInvadersSession();}else showResult();}
-function startTimer(){timeLeft=30;document.getElementById("timer").textContent=`Time: ${timeLeft}s`;questionStartTime=Date.now();timer=setInterval(()=>{timeLeft--;document.getElementById("timer").textContent=`Time: ${timeLeft}s`;if(timeLeft===0){clearInterval(timer);showResult();}},1000);}
-function showResult(){isGameOver=true;document.getElementById("game").style.display="none";document.querySelector(".canvas-container").style.display="none";document.getElementById("result").style.display="block";document.getElementById("score").textContent=score;}
-document.getElementById("play-again").onclick=()=>{score=0;currentQuestionIndex=0;isGameOver=false;bullets=[];aliens=[];boss=null;wave=1;ship.x=canvas.width/2-10;document.getElementById("game").style.display="block";document.getElementById("result").style.display="none";document.querySelector(".canvas-container").style.display="block";loadQuestion();}
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Math Challenge</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
 
-function startSpaceInvadersSession(){if(!allowPlay)return;gameRunning=true;let startTime=Date.now();function sessionLoop(){if(!gameRunning)return;ctx.clearRect(0,0,canvas.width,canvas.height);updateShip();drawShip();drawBullets();updateBullets();if(boss){updateBoss();drawBoss();}else{updateAliens();drawAliens();}frameCount++;if(Date.now()-startTime>=gameTime*1000){endGameSession();return;}requestAnimationFrame(sessionLoop);}sessionLoop();}
-function createAliens(){aliens=[];let count=5+wave*2;for(let i=0;i<count;i++){aliens.push({x:(i%6)*40+10,y:Math.floor(i/6)*30+10,width:15,height:15});}}
-function updateShip(){if(keys["ArrowLeft"]&&ship.x>0)ship.x-=4;if(keys["ArrowRight"]&&ship.x<canvas.width-ship.width)ship.x+=4;}
-function drawShip(){ctx.fillStyle="white";ctx.fillRect(ship.x,ship.y,ship.width,ship.height);}
-function updateBullets(){bullets.forEach((b,i)=>{b.y-=6;if(b.y<0)bullets.splice(i,1);aliens.forEach((a,j)=>{if(b.x<a.x+a.width&&b.x+b.width>a.x&&b.y<a.y+a.height&&b.y+b.height>a.y){aliens.splice(j,1);bullets.splice(i,1);score+=50;}});if(boss&&b.x<boss.x+boss.width&&b.x+b.width>boss.x&&b.y<boss.y+boss.height&&b.y+b.height>boss.y){boss.hp-=10;bullets.splice(i,1);if(boss.hp<=0){score+=1000;boss=null;endGameSession();}}});}
-function drawBullets(){bullets.forEach(b=>{ctx.fillStyle="yellow";ctx.fillRect(b.x,b.y,b.width,b.height);});}
-function updateAliens(){if(frameCount%(30-wave*2)===0){aliens.forEach(a=>{a.y+=4+wave;if(a.y+a.height>canvas.height)endGameSession();});}if(aliens.length===0&&!boss){wave++;if(wave<=4)createAliens();else spawnBoss();}}
-function drawAliens(){aliens.forEach(a=>{ctx.fillStyle="red";ctx.fillRect(a.x,a.y,a.width,a.height);});}
-function spawnBoss(){boss={x:80,y:20,width:80,height:30,hp:150};}
-function updateBoss(){if(frameCount%20===0){boss.y+=2;boss.x+=(Math.random()-0.5)*10;if(boss.y+boss.height>canvas.height)endGameSession();}}
-function drawBoss(){ctx.fillStyle="purple";ctx.fillRect(boss.x,boss.y,boss.width,boss.height);ctx.fillStyle="white";ctx.fillText("BOSS",boss.x+20,boss.y+20);ctx.fillStyle="green";ctx.fillRect(boss.x,boss.y-10,boss.width*(boss.hp/150),5);}
-function endGameSession(){gameRunning=false;allowPlay=false;currentQuestionIndex++;if(currentQuestionIndex<questions.length){setTimeout(()=>loadQuestion(),500);}else showResult();}
-window.addEventListener("keydown",e=>{keys[e.key]=true;if(e.key===" ")shoot();});
-window.addEventListener("keyup",e=>keys[e.key]=false);
-function shoot(){if(allowPlay)bullets.push({x:ship.x+ship.width/2-2.5,y:ship.y,width:5,height:10});}
-createAliens();loadQuestion();
-</script>
-</body></html>
+<body>
+    <!-- Particle Background -->
+    <div class="particles" id="particles"></div>
+    
+    <!-- Audio Elements -->
+    <audio id="correct-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="wrong-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="game-over-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="high-score-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="shoot-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-laser-weapon-shot-1681.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="explosion-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-explosion-impact-1682.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="click-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="powerup-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-bonus-earned-in-video-game-2058.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="achievement-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-unlock-game-notification-253.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="background-music" preload="auto" loop>
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-game-level-music-689.mp3" type="audio/mpeg">
+    </audio>
+    
+    <main class="game-container animate-in">
+        <!-- Sound Controls -->
+        <div class="sound-controls">
+            <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound">
+                <span id="sound-icon">🔊</span>
+            </button>
+            <button id="music-toggle" class="sound-toggle" aria-label="Toggle music">
+                <span id="music-icon">🎵</span>
+            </button>
+        </div>
+        
+        <h1 class="neon-text">Math Challenge</h1>
+        
+        <!-- Main Menu -->
+        <div id="main-menu" class="animate-in delay-1">
+            <div class="difficulty-options">
+                <button id="single-player-btn" class="difficulty-btn medium">Single Player</button>
+                <button id="multiplayer-btn" class="difficulty-btn easy">Multiplayer</button>
+                <button id="leaderboard-btn" class="difficulty-btn hard">Leaderboard</button>
+                <button id="achievements-btn" class="difficulty-btn" style="background: linear-gradient(135deg, var(--color-yellow-500), var(--color-orange-600));">Achievements</button>
+            </div>
+        </div>
+        
+        <!-- Difficulty Selector -->
+        <div id="difficulty-selector" class="difficulty-selector animate-in delay-1" style="display: none;">
+            <h2 class="difficulty-title">Select Difficulty</h2>
+            <div class="difficulty-options">
+                <button class="difficulty-btn easy" data-difficulty="easy">Easy</button>
+                <button class="difficulty-btn medium" data-difficulty="medium">Medium</button>
+                <button class="difficulty-btn hard" data-difficulty="hard">Hard</button>
+            </div>
+            <p id="difficulty-description" class="difficulty-description">
+                Choose a difficulty level to start the game
+            </p>
+        </div>
+        
+        <!-- Multiplayer Setup -->
+        <div id="multiplayer-setup" class="animate-in delay-1" style="display: none;">
+            <h2 class="difficulty-title">Multiplayer Setup</h2>
+            <div class="name-input-form" style="margin-bottom: 20px;">
+                <div style="margin-bottom: 10px;">
+                    <label for="player1-name">Player 1 Name:</label>
+                    <input type="text" id="player1-name" class="name-input" value="Player 1">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label for="player2-name">Player 2 Name:</label>
+                    <input type="text" id="player2-name" class="name-input" value="Player 2">
+                </div>
+                <div class="difficulty-options">
+                    <button class="difficulty-btn easy mp-difficulty-btn" data-difficulty="easy">Easy</button>
+                    <button class="difficulty-btn medium mp-difficulty-btn" data-difficulty="medium">Medium</button>
+                    <button class="difficulty-btn hard mp-difficulty-btn" data-difficulty="hard">Hard</button>
+                </div>
+                <p id="mp-difficulty-description" class="difficulty-description" style="margin-top: 10px;">
+                    Choose a difficulty level for the multiplayer game
+                </p>
+                <button id="start-multiplayer" class="next-button" style="margin-top: 20px;">Start Multiplayer Game</button>
+            </div>
+        </div>
+        
+        <div id="game-content" style="display: none;">
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+            </div>
+            
+            <!-- Multiplayer Player Indicator -->
+            <div id="player-indicator" class="player-indicator" style="display: none;">
+                Player 1's Turn
+            </div>
+            
+            <!-- Player Scores for Multiplayer -->
+            <div id="player-scores" class="player-scores" style="display: none;">
+                <div class="player-score" id="player1-score-display">
+                    <div class="player-name">Player 1</div>
+                    <div class="player-points">0</div>
+                </div>
+                <div class="player-score" id="player2-score-display">
+                    <div class="player-name">Player 2</div>
+                    <div class="player-points">0</div>
+                </div>
+            </div>
+            
+            <div class="score-display" id="single-player-score">
+                <div class="score-item">
+                    <span class="score-label">Current Score</span>
+                    <span class="score-value" id="current-score">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="score-label">Question</span>
+                    <span class="score-value" id="question-number">1/30</span>
+                </div>
+                <div class="score-item">
+                    <span class="score-label">High Score</span>
+                    <span class="score-value" id="high-score">0</span>
+                </div>
+            </div>
+            
+            <!-- Power-ups Container -->
+            <div class="powerups-container" id="powerups-container">
+                <div class="powerup powerup-shield" id="shield-powerup" data-count="0">
+                    🛡️
+                    <span class="powerup-count">0</span>
+                    <div class="powerup-tooltip">Shield: Protects from one wrong answer</div>
+                </div>
+                <div class="powerup powerup-multishot" id="multishot-powerup" data-count="0">
+                    🔫
+                    <span class="powerup-count">0</span>
+                    <div class="powerup-tooltip">Multi-shot: Fire 3 bullets at once</div>
+                </div>
+                <div class="powerup powerup-time" id="time-powerup" data-count="0">
+                    ⏱️
+                    <span class="powerup-count">0</span>
+                    <div class="powerup-tooltip">Time Freeze: +15 seconds</div>
+                </div>
+                <div class="powerup powerup-multiplier" id="multiplier-powerup" data-count="0">
+                    ✨
+                    <span class="powerup-count">0</span>
+                    <div class="powerup-tooltip">Score Multiplier: 2x points for 30 seconds</div>
+                </div>
+            </div>
+            
+            <section id="game" class="animate-in delay-1">
+                <div id="timer" class="timer">Time: 60s</div>
+                <div id="question-container" class="glass-effect">
+                    <p id="question" class="typing-animation">Loading...</p>
+                    <!-- Container for question images -->
+                    <div id="question-image-container" class="question-image-container"></div>
+                    <div id="answer-options" class="answer-options"></div>
+                </div>
+            </section>
+
+            <section id="result" class="glass-effect animate-in delay-2">
+                <h2 class="game-over-message">Game Over!</h2>
+                <p>Your score: <span id="score">0</span></p>
+                <!-- High Score Banner will be inserted here when needed -->
+                <div id="result-buttons">
+                    <button id="play-again" class="next-button button-3d" type="button">Play Again</button>
+                    <button id="save-score" class="next-button button-3d" type="button" style="background: linear-gradient(135deg, var(--color-green-500), var(--color-green-600)); margin-top: 10px;">Save Score</button>
+                </div>
+            </section>
+
+            <div class="canvas-container animate-in delay-3">
+                <canvas id="gameCanvas" width="500" height="300"></canvas>
+            </div>
+            
+            <!-- Confetti Container for Correct Answers -->
+            <div class="confetti-container" id="confetti-container"></div>
+        </div>
+        
+        <!-- Versus Screen for Multiplayer -->
+        <div id="versus-screen" class="versus-screen" style="display: none;">
+            <h2 class="versus-title">Game Results</h2>
+            <div class="versus-players">
+                <div class="versus-player">
+                    <div class="versus-player-name" id="versus-player1-name">Player 1</div>
+                    <div class="versus-player-score" id="versus-player1-score">0</div>
+                </div>
+                <div class="versus-divider">VS</div>
+                <div class="versus-player">
+                    <div class="versus-player-name" id="versus-player2-name">Player 2</div>
+                    <div class="versus-player-score" id="versus-player2-score">0</div>
+                </div>
+            </div>
+            <div class="versus-result" id="versus-result">Player 1 Wins!</div>
+            <button id="versus-back-to-menu" class="next-button" style="margin-top: 20px;">Back to Menu</button>
+        </div>
+    </main>
+    
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <button class="modal-close" id="close-leaderboard">&times;</button>
+            <div class="leaderboard-container">
+                <h2 class="leaderboard-title">Leaderboard</h2>
+                <div class="leaderboard-filters">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="easy">Easy</button>
+                    <button class="filter-btn" data-filter="medium">Medium</button>
+                    <button class="filter-btn" data-filter="hard">Hard</button>
+                </div>
+                <ul class="leaderboard-list" id="leaderboard-list">
+                    <!-- Leaderboard items will be inserted here -->
+                </ul>
+                <div class="leaderboard-buttons">
+                    <button id="leaderboard-back" class="next-button" style="max-width: 150px;">Back</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Name Input Modal -->
+    <div id="name-input-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="name-input-container">
+                <h2 class="name-input-title">Enter Your Name</h2>
+                <form class="name-input-form" id="name-input-form">
+                    <input type="text" class="name-input" id="player-name" placeholder="Your name" required>
+                    <button type="submit" class="name-input-submit">Save Score</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Achievements Modal -->
+    <div id="achievements-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <button class="modal-close" id="close-achievements">&times;</button>
+            <div class="achievements-container">
+                <h2 class="achievements-title">Achievements</h2>
+                <div class="achievements-grid" id="achievements-grid">
+                    <!-- Achievements will be inserted here -->
+                </div>
+                <div class="leaderboard-buttons">
+                    <button id="achievements-back" class="next-button" style="max-width: 150px; margin-top: 20px;">Back</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tutorial Modal -->
+    <div id="tutorial-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content tutorial-content">
+            <button class="modal-close" id="close-tutorial">&times;</button>
+            <div class="tutorial-container">
+                <h2 class="tutorial-title">How to Play</h2>
+                <div class="tutorial-steps">
+                    <div class="tutorial-step">
+                        <div class="tutorial-step-number">1</div>
+                        <div class="tutorial-step-content">
+                            <h3>Answer Math Questions</h3>
+                            <p>Select the correct answer from the options provided. The faster you answer, the more points you earn!</p>
+                        </div>
+                    </div>
+                    <div class="tutorial-step">
+                        <div class="tutorial-step-number">2</div>
+                        <div class="tutorial-step-content">
+                            <h3>Play the Mini-Game</h3>
+                            <p>After a correct answer, use arrow keys to move and spacebar to shoot aliens. Collect power-ups that fall from defeated aliens!</p>
+                        </div>
+                    </div>
+                    <div class="tutorial-step">
+                        <div class="tutorial-step-number">3</div>
+                        <div class="tutorial-step-content">
+                            <h3>Use Power-ups</h3>
+                            <p>Click on collected power-ups to activate them:</p>
+                            <ul class="tutorial-powerups">
+                                <li><span class="powerup-icon">🛡️</span> Shield: Protects from one wrong answer</li>
+                                <li><span class="powerup-icon">🔫</span> Multi-shot: Fire 3 bullets at once</li>
+                                <li><span class="powerup-icon">⏱️</span> Time Freeze: Adds 15 seconds to the timer</li>
+                                <li><span class="powerup-icon">✨</span> Score Multiplier: 2x points for 30 seconds</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <button id="tutorial-back" class="next-button" style="margin-top: 20px;">Got it!</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="script2.js"></script>
+</body>
+
+</html>
